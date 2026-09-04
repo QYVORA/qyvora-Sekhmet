@@ -1,0 +1,89 @@
+package cli
+
+import (
+	"context"
+	"fmt"
+	"io"
+	"os"
+
+	"github.com/spf13/viper"
+
+	errs "github.com/QYVORA/qyvora-sekhmet/internal/errors"
+	"github.com/QYVORA/qyvora-sekhmet/internal/events"
+	"github.com/QYVORA/qyvora-sekhmet/internal/logger"
+	"github.com/QYVORA/qyvora-sekhmet/internal/output"
+	"github.com/QYVORA/qyvora-sekhmet/internal/session"
+	"github.com/QYVORA/qyvora-sekhmet/internal/target"
+	"github.com/QYVORA/qyvora-sekhmet/pkg/models"
+)
+
+type appState struct {
+	cfg     *viper.Viper
+	log     *logger.Logger
+	printer *output.Printer
+	targets *target.Manager
+	store   *session.Store
+
+	eventStream *events.Stream
+	eventSink   io.Writer
+
+	cfgFile   string
+	verbose   bool
+	quiet     bool
+	jsonOut   bool
+	outputFmt string
+	eventsF   string
+	dryRun    bool
+	timeout   string
+
+	initErr error
+}
+
+func newAppState() *appState {
+	return &appState{}
+}
+
+func (a *appState) requireTarget() (*models.Target, error) {
+	t := a.targets.Current()
+	if t == nil {
+		return nil, errs.NewExitError(2, "no target selected; run 'sekhmet target set' first")
+	}
+	if !t.Authorized() && !t.Sim {
+		return nil, errs.NewExitError(2, "current target is not authorized: "+t.DisplayName())
+	}
+	return t, nil
+}
+
+func (a *appState) persistSession(sess *models.Session) (string, error) {
+	path, err := a.store.Save(sess)
+	if err != nil {
+		return "", err
+	}
+	sess.OutputDir = a.store.Dir()
+	return path, nil
+}
+
+func (a *appState) emitf(format string, args ...any) {
+	fmt.Fprintf(a.printer.Writer(), format+"\n", args...)
+}
+
+func (a *appState) resolveEvents(_ context.Context) error {
+	var w io.Writer
+	switch a.eventsF {
+	case "", "off":
+		return nil
+	case "stdout":
+		w = os.Stdout
+	case "stderr":
+		w = os.Stderr
+	default:
+		f, err := os.OpenFile(a.eventsF, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o600)
+		if err != nil {
+			return fmt.Errorf("opening events file: %w", err)
+		}
+		w = f
+	}
+	a.eventStream = events.NewStream(w)
+	a.eventSink = w
+	return nil
+}
