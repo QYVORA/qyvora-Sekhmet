@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=SEKHMET
+GenericName=Fuzzing & Vulnerability Discovery Framework
+Comment=High-performance, baseline-aware, feedback-driven fuzzing and vulnerability discovery
+Exec=@PREFIX@/bin/sekhmet
+Icon=@PREFIX@/share/icons/hicolor/512x512/apps/sekhmet.png
+Terminal=true
+Categories=Utility;Development;Security;
+Keywords=fuzz;fuzzing;mutation;coverage;baseline;crash;vulnerability;security;analysis;

@@ -79,7 +79,19 @@ Build from source (Go 1.26+):
 make build            # builds bin/sekhmet
 make test-race        # full test suite with race detector
 make check            # gofmt + vet + test
-sudo make install     # install to /usr/local/bin
+sudo make install     # install to /usr/local/bin with logo + desktop entry
+make install-user     # install to ~/.local/bin with logo + desktop entry
+```
+
+Zero-config installers (auto-detect OS/arch, download the matching prebuilt
+release binary, verify SHA-256, install the logo, and wire up PATH / desktop
+entry / Start Menu):
+
+```sh
+# Linux / macOS
+curl -fsSL https://raw.githubusercontent.com/QYVORA/qyvora-Sekhmet/main/install.sh | bash
+# Windows (PowerShell)
+irm https://raw.githubusercontent.com/QYVORA/qyvora-Sekhmet/main/install.ps1 | iex
 ```
 
 ## Quick start
