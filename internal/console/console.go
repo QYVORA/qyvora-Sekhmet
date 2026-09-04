@@ -12,6 +12,8 @@ import (
 	"strings"
 
 	"github.com/chzyer/readline"
+
+	"github.com/QYVORA/qyvora-sekhmet/internal/banner"
 )
 
 // Cmd is a dispatchable console command.
@@ -55,9 +57,18 @@ func (c *Console) Register(cmd *Cmd) {
 
 func (c *Console) registerBuiltins() {
 	c.Register(&Cmd{Name: "help", Help: "list console commands", Run: c.runHelp})
+	c.Register(&Cmd{Name: "banner", Help: "show the brand ASCII banner", Run: func(_ context.Context, _ []string) error {
+		printBanner()
+		return nil
+	}})
 	c.Register(&Cmd{Name: "quit", Aliases: []string{"exit"}, Help: "exit the console", Run: func(_ context.Context, _ []string) error {
 		return errQuit{}
 	}})
+}
+
+// printBanner writes the canonical startup banner followed by a short footer.
+func printBanner() {
+	fmt.Print(banner.Art)
 }
 
 type errQuit struct{}
@@ -91,6 +102,7 @@ func (c *Console) Run(ctx context.Context) error {
 		return err
 	}
 	defer func() { _ = rl.Close() }()
+	printBanner()
 	fmt.Println("sekhmet console. Type 'help' for commands, 'quit' to exit.")
 
 	for {
