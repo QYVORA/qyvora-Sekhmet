@@ -1,0 +1,54 @@
+# Changelog
+
+All notable changes to SEKHMET are documented here. This project follows
+[Keep a Changelog](https://keepachangelog.com/) and uses
+[Semantic Versioning](https://semver.org/).
+
+## [Unreleased]
+
+### Added
+
+- **Baseline profiling** — profile a target's normal exit codes, signals,
+  runtime and output variance before fuzzing (`sekhmet baseline`).
+- **Execution modes** — process (`{fuzz}` / `{stdin}` templates), HTTP and a
+  deterministic **simulation** target for CI and testing.
+- **Corpus management** — import, crops, persistent store with SHA-256
+  dedup, priority and trimming (`sekhmet corpus`).
+- **Adaptive mutation** — 17 structured operators (bit/byte, block,
+  dictionary insert, JSON structure, boundary, length, splice, …) with a
+  seeded RNG (`internal/mutation`).
+- **Feedback tracking** — behavioral / edges / blocks novelty scoring feeding
+  power scheduling (`internal/feedback`).
+- **Power scheduling** — fast / explore / exploit / rare / balanced /
+  adaptive strategies with integrity guards (`internal/scheduler`).
+- **Detection** — signal-aware crash/hang/anomaly classification plus
+  ASan/UBSan/MSan text matching, deduplicated by SHA-256 signature
+  (`internal/detection`).
+- **Minimization** — delta-debugging reducer for minimal reproducers
+  (`sekhmet minimize`).
+- **Replay** — reproduce an input against a target (`sekhmet replay`).
+- **Sessions & reports** — persistent sessions; terminal/JSON/YAML reporting
+  (`sekhmet session`, `sekhmet report`).
+- **Safety guards** — execution budgets, size caps, concurrency limits,
+  authorization gates, dry-run (`internal/safety`).
+- **SecLists integration** — list categories and search wordlists without
+  vendoring ~5 GB (`sekhmet wordlists`).
+- **Interactive console** — run `sekhmet` with no args for an interactive
+  REPL (`internal/console`).
+- **Capabilities** — machine-readable capability catalog (`internal/capabilities`).
+- **CI & quality** — `.github/workflows/ci.yml`, `.golangci.yml`, Makefile.
+
+### Changed
+
+- Hot path (select → mutate → execute → classify → feedback) tuned for high
+  throughput with async deep analysis off the critical path.
+
+### Fixed
+
+- Data races in the mutation engine and scheduler under concurrent workers.
+- Crash signature generation (`itoa`) producing garbage fingerprints.
+- Baseline terminal output now renders a clean metric table.
+
+## [0.1.0] - unreleased
+
+Initial foundation release.
