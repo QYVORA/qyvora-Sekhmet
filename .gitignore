@@ -1,0 +1,22 @@
+# Build output
+/sekhmet
+/dist/
+/bin/
+*.exe
+
+# Runtime artifacts (sessions, corpus, reports) created by sekhmet
+/sessions/
+/corpus/
+/reports/
+*.session.json
+
+# Test / tooling output
+/coverage.out
+*.test
+
+# OS / editor
+.DS_Store
+*.swp
+
+# Local automation artifact
+continue_AI.sh
