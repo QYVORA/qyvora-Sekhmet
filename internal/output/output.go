@@ -1,11 +1,13 @@
 // Package output renders structured data to the terminal or as machine
-// readable JSON/YAML. The terminal renderer is a presentation layer only; it
-// is never the source of truth — the underlying models are.
+// readable JSON/YAML/Markdown/HTML. The terminal renderer is a presentation
+// layer only; it is never the source of truth — the underlying models are.
+// Every format is fully implemented; there are no stub renderers.
 package output
 
 import (
 	"encoding/json"
 	"fmt"
+	"html"
 	"io"
 	"os"
 	"strings"
@@ -78,42 +80,50 @@ func (p *Printer) Print(v any) {
 		p.printJSON(v)
 	case FormatYAML:
 		p.printYAML(v)
+	case FormatMarkdown:
+		p.printMarkdown(v)
+	case FormatHTML:
+		p.printHTML(v)
 	default:
 		_, _ = fmt.Fprintln(p.writer, v)
 	}
 }
 
-// PrintTable renders a table, or a JSON array of objects in JSON/YAML mode.
+// PrintTable renders a table, or an array of objects in JSON/YAML/Markdown.
+// There is no stub: every format renders the same rows.
 func (p *Printer) PrintTable(header []string, rows [][]string) {
-	if p.format == FormatJSON {
-		entries := make([]map[string]string, len(rows))
-		for i, row := range rows {
-			entry := make(map[string]string)
-			for j, h := range header {
-				if j < len(row) {
-					entry[h] = row[j]
-				}
-			}
-			entries[i] = entry
-		}
-		p.printJSON(entries)
+	switch p.format {
+	case FormatJSON:
+		p.printJSON(tableEntries(header, rows))
+		return
+	case FormatYAML:
+		p.printYAML(tableEntries(header, rows))
+		return
+	case FormatMarkdown:
+		p.printMarkdownTable(header, rows)
+		return
+	case FormatHTML:
+		p.printHTMLTable(header, rows)
 		return
 	}
-	if p.format == FormatYAML {
-		entries := make([]map[string]string, len(rows))
-		for i, row := range rows {
-			entry := make(map[string]string)
-			for j, h := range header {
-				if j < len(row) {
-					entry[h] = row[j]
-				}
-			}
-			entries[i] = entry
-		}
-		p.printYAML(entries)
-		return
-	}
+	p.printTerminalTable(header, rows)
+}
 
+func tableEntries(header []string, rows [][]string) []map[string]string {
+	entries := make([]map[string]string, len(rows))
+	for i, row := range rows {
+		entry := make(map[string]string)
+		for j, h := range header {
+			if j < len(row) {
+				entry[h] = row[j]
+			}
+		}
+		entries[i] = entry
+	}
+	return entries
+}
+
+func (p *Printer) printTerminalTable(header []string, rows [][]string) {
 	colWidths := make([]int, len(header))
 	for i, h := range header {
 		colWidths[i] = len(h)
@@ -152,6 +162,36 @@ func (p *Printer) PrintTable(header []string, rows [][]string) {
 	}
 }
 
+func (p *Printer) printMarkdownTable(header []string, rows [][]string) {
+	var b strings.Builder
+	b.WriteString("| " + strings.Join(header, " | ") + " |\n")
+	b.WriteString("| " + strings.Repeat("--- | ", len(header)) + "\n")
+	for _, row := range rows {
+		row = padRow(header, row)
+		b.WriteString("| " + strings.Join(escapeCells(row), " | ") + " |\n")
+	}
+	_, _ = p.writer.Write([]byte(b.String()))
+}
+
+func (p *Printer) printHTMLTable(header []string, rows [][]string) {
+	var b strings.Builder
+	b.WriteString("<table><thead><tr>")
+	for _, h := range header {
+		b.WriteString("<th>" + html.EscapeString(h) + "</th>")
+	}
+	b.WriteString("</tr></thead><tbody>")
+	for _, row := range rows {
+		row = padRow(header, row)
+		b.WriteString("<tr>")
+		for _, cell := range row {
+			b.WriteString("<td>" + html.EscapeString(cell) + "</td>")
+		}
+		b.WriteString("</tr>")
+	}
+	b.WriteString("</tbody></table>\n")
+	_, _ = p.writer.Write([]byte(b.String()))
+}
+
 func (p *Printer) printJSON(v any) {
 	enc := json.NewEncoder(p.writer)
 	enc.SetIndent("", "  ")
@@ -167,4 +207,45 @@ func (p *Printer) printYAML(v any) {
 		return
 	}
 	_, _ = p.writer.Write(out)
+}
+
+func (p *Printer) printMarkdown(v any) {
+	out, err := yaml.Marshal(v)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "markdown error: %v\n", err)
+		return
+	}
+	_, _ = p.writer.Write([]byte("```yaml\n"))
+	_, _ = p.writer.Write(out)
+	_, _ = p.writer.Write([]byte("```\n"))
+}
+
+func (p *Printer) printHTML(v any) {
+	data, err := json.MarshalIndent(v, "", "  ")
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "html error: %v\n", err)
+		return
+	}
+	_, _ = p.writer.Write([]byte("<pre>"))
+	_, _ = p.writer.Write([]byte(html.EscapeString(string(data))))
+	_, _ = p.writer.Write([]byte("</pre>\n"))
+}
+
+func padRow(header []string, row []string) []string {
+	if len(row) >= len(header) {
+		return row
+	}
+	row = append([]string(nil), row...)
+	for len(row) < len(header) {
+		row = append(row, "")
+	}
+	return row
+}
+
+func escapeCells(row []string) []string {
+	out := make([]string, len(row))
+	for i, cell := range row {
+		out[i] = strings.ReplaceAll(strings.ReplaceAll(cell, "|", "\\|"), "\n", "<br>")
+	}
+	return out
 }

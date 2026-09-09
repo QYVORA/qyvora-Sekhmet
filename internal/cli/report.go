@@ -1,12 +1,14 @@
 package cli
 
 import (
+	"bytes"
 	"os"
 	"strings"
 
 	"github.com/spf13/cobra"
 
 	errs "github.com/QYVORA/qyvora-sekhmet/internal/errors"
+	"github.com/QYVORA/qyvora-sekhmet/internal/output"
 	"github.com/QYVORA/qyvora-sekhmet/pkg/models"
 )
 
@@ -27,7 +29,7 @@ func newReportCmd() *cobra.Command {
 			if err != nil {
 				return errs.WrapExitError(2, "loading session", err)
 			}
-			body := renderReport(sess)
+			body := renderSessionFormatted(sess, app.printer.Format())
 			if out != "" {
 				if err := os.WriteFile(out, []byte(body), 0o600); err != nil {
 					return errs.WrapExitError(1, "writing report", err)
@@ -35,13 +37,32 @@ func newReportCmd() *cobra.Command {
 				app.emitf("report written to %s", out)
 				return nil
 			}
-			app.emitf("%s", body)
+			w := app.printer.Writer()
+			_, _ = w.Write([]byte(body))
+			if !strings.HasSuffix(body, "\n") {
+				_, _ = w.Write([]byte("\n"))
+			}
 			return nil
 		},
 	}
 	cmd.Flags().StringVar(&sessionID, "session", "", "session id to report")
 	cmd.Flags().StringVar(&out, "out", "", "write report to file")
 	return cmd
+}
+
+// renderSessionFormatted renders a session in the active output format. The
+// human report is used only for the terminal; machine formats serialize the
+// structured session model through the printer so the output stays valid.
+func renderSessionFormatted(sess *models.Session, f output.Format) string {
+	if f == output.FormatTerminal {
+		return renderReport(sess)
+	}
+	var buf bytes.Buffer
+	p := output.New()
+	p.SetFormat(f)
+	p.SetWriter(&buf)
+	p.Print(sess)
+	return buf.String()
 }
 
 func renderReport(sess *models.Session) string {

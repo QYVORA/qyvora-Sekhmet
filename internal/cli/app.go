@@ -63,8 +63,14 @@ func (a *appState) persistSession(sess *models.Session) (string, error) {
 	return path, nil
 }
 
+// emitf writes an informational line. In terminal mode it goes to the output
+// writer; in machine-readable formats it goes to stderr so stdout stays pure.
 func (a *appState) emitf(format string, args ...any) {
-	fmt.Fprintf(a.printer.Writer(), format+"\n", args...)
+	if a.printer.Format() == output.FormatTerminal {
+		fmt.Fprintf(a.printer.Writer(), format+"\n", args...)
+		return
+	}
+	fmt.Fprintf(os.Stderr, format+"\n", args...)
 }
 
 func (a *appState) resolveEvents(_ context.Context) error {

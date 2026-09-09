@@ -6,7 +6,23 @@ All notable changes to SEKHMET are documented here. This project follows
 
 ## [Unreleased]
 
+### Changed
+
+- **Full markdown/HTML output** — `Print`/`PrintTable` render real markdown
+  and HTML (no plain-text fallthrough) for `--output markdown|html`.
+- **Machine-output purity** — informational messages move to stderr when a
+  machine-readable format is active; `report` now honors `--output` by
+  serializing the structured session model instead of the plain-text body.
+- **ANSI hygiene** — terminal colors are disabled when stdout is piped or
+  redirected or `NO_COLOR` is set, so no escape sequences leak into output.
+- **Console** — non-interactive stdin falls back to a plain line reader,
+  history persists to `~/.qyvora/sekhmet_history`, and tab completion is
+  provided for builtins.
+- Fatal config/event errors no longer call `os.Exit(1)` directly; they surface
+  through `Execute`'s exit-code contract.
+
 ### Added
+
 
 - **Baseline profiling** — profile a target's normal exit codes, signals,
   runtime and output variance before fuzzing (`sekhmet baseline`).

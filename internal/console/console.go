@@ -7,8 +7,11 @@
 package console
 
 import (
+	"bufio"
 	"context"
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/chzyer/readline"
@@ -89,17 +92,25 @@ func (c *Console) runHelp(_ context.Context, _ []string) error {
 	return nil
 }
 
-// Run starts the interactive loop until EOF or quit.
+// Run starts the interactive loop until EOF or quit. When stdin is not an
+// interactive terminal the console falls back to a plain line reader so piped
+// input works without line-editing escapes on stdout.
 func (c *Console) Run(ctx context.Context) error {
+	if !stdinIsTerminal() {
+		return c.runPlain(ctx)
+	}
+
 	rl, err := readline.NewEx(&readline.Config{
 		Prompt:            "sekhmet> ",
-		HistoryFile:       "/dev/null",
+		HistoryFile:       c.historyPath(),
 		InterruptPrompt:   "^C",
 		EOFPrompt:         "exit",
 		HistorySearchFold: true,
+		AutoComplete:      readline.NewPrefixCompleter(c.completer()...),
 	})
 	if err != nil {
-		return err
+		_, _ = fmt.Fprintf(os.Stderr, "line editing unavailable (%v); continuing in plain mode\n", err)
+		return c.runPlain(ctx)
 	}
 	defer func() { _ = rl.Close() }()
 	printBanner()
@@ -125,6 +136,69 @@ func (c *Console) Run(ctx context.Context) error {
 		}
 	}
 	return nil
+}
+
+// runPlain executes console lines from a non-interactive stdin, writing only
+// command output and errors (never banners or control sequences) to stdout.
+func (c *Console) runPlain(ctx context.Context) error {
+	sc := bufio.NewScanner(os.Stdin)
+	for sc.Scan() {
+		line := strings.TrimSpace(sc.Text())
+		if line == "" {
+			continue
+		}
+		if err := c.run(ctx, line); err != nil {
+			if _, ok := err.(errQuit); ok {
+				return nil
+			}
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		}
+	}
+	return sc.Err()
+}
+
+// historyPath returns the console history file, creating its parent directory.
+func (c *Console) historyPath() string {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return ".sekhmet_history"
+	}
+	dir := filepath.Join(home, ".qyvora")
+	if err := os.MkdirAll(dir, 0o700); err != nil {
+		return ".sekhmet_history"
+	}
+	return filepath.Join(dir, "sekhmet_history")
+}
+
+// stdinIsTerminal reports whether standard input is an interactive device.
+func stdinIsTerminal() bool {
+	fi, err := os.Stdin.Stat()
+	if err != nil {
+		return false
+	}
+	return fi.Mode()&os.ModeCharDevice != 0
+}
+
+func (c *Console) completer() []readline.PrefixCompleterInterface {
+	return []readline.PrefixCompleterInterface{
+		readline.PcItem("help"),
+		readline.PcItem("banner"),
+		readline.PcItem("quit", readline.PcItem("exit")),
+		readline.PcItem("baseline"),
+		readline.PcItem("fuzz"),
+		readline.PcItem("analyze"),
+		readline.PcItem("corpus"),
+		readline.PcItem("crashes"),
+		readline.PcItem("minimize"),
+		readline.PcItem("replay"),
+		readline.PcItem("session"),
+		readline.PcItem("report"),
+		readline.PcItem("target"),
+		readline.PcItem("wordlists"),
+		readline.PcItem("capabilities"),
+		readline.PcItem("updates"),
+		readline.PcItem("version"),
+	}
 }
 
 func (c *Console) run(ctx context.Context, line string) error {
