@@ -70,6 +70,7 @@ reporting are implemented and tested. See [CHANGELOG.md](CHANGELOG.md) and
   authorization gates and dry-run; see [docs/Safety-Model.md](docs/Safety-Model.md)
 - **SecLists integration** — search and load words without vendoring ~5 GB
 - **Interactive console** — run `sekhmet` with no args to work interactively
+  (real terminal); piped/redirected stdin degrades to a plain line reader
 
 ## Install
 
@@ -153,6 +154,11 @@ with `framework: "sekhmet"`. Agents and CI consume this directly.
 Options are resolved by precedence: **CLI flags > `QYVORA_SEKHMET_*`
 environment variables > config file > defaults**. Use `QYVORA_SEKHMET_SESSION_DIR`
 to relocate session storage (default `./sessions`).
+
+## Contact
+
+QYVORA OffSec — Tamale, Ghana
+Website: https://qyvora.netlify.app · Security/Support: qyvorasec@gmail.com
 
 ## Contributing
 
