@@ -38,7 +38,7 @@ func newHTTPRunner(t *models.Target, opts *Options) (Runner, error) {
 	client := &http.Client{
 		Timeout: opts.HTTPTimeout,
 		Transport: &http.Transport{
-			TLSClientConfig:     &tls.Config{InsecureSkipVerify: true}, // user-scoped authorized testing
+			TLSClientConfig:     &tls.Config{InsecureSkipVerify: opts.InsecureTLS},
 			MaxIdleConns:        100,
 			MaxIdleConnsPerHost: 16,
 		},

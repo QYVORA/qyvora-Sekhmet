@@ -27,14 +27,15 @@ type appState struct {
 	eventStream *events.Stream
 	eventSink   io.Writer
 
-	cfgFile   string
-	verbose   bool
-	quiet     bool
-	jsonOut   bool
-	outputFmt string
-	eventsF   string
-	dryRun    bool
-	timeout   string
+	cfgFile     string
+	verbose     bool
+	quiet       bool
+	jsonOut     bool
+	outputFmt   string
+	eventsF     string
+	dryRun      bool
+	timeout     string
+	insecureTLS bool
 
 	initErr error
 }

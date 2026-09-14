@@ -18,6 +18,8 @@ type ExecutionResult struct {
 	Killed     bool          `json:"killed"`
 	Failed     bool          `json:"failed"` // launch/runtime failure, not target crash
 	Error      string        `json:"error,omitempty"`
+	// OutputTruncated marks captured stdio that was cut at the output cap.
+	OutputTruncated bool `json:"output_truncated,omitempty"`
 
 	// HTTP fields populated for http targets.
 	StatusCode int                 `json:"status_code,omitempty"`

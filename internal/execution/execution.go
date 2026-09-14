@@ -38,6 +38,10 @@ type Options struct {
 	// MaxInputSize hard-caps input bytes fed to a target to prevent resource
 	// exhaustion on the hot path.
 	MaxInputSize int
+	// MaxOutput caps captured stdout/stderr bytes per execution. Excess bytes
+	// are consumed and discarded so a chatty child never blocks on a full
+	// pipe or exhausts memory.
+	MaxOutput int
 	// Stdin to feed a CLI/process target. If false, argv or file is used per
 	// the target config.
 	UseStdin bool
@@ -48,6 +52,10 @@ type Options struct {
 	HTTPTimeout time.Duration
 	// HTTPMaxBody caps response bodies captured.
 	HTTPMaxBody int
+	// InsecureTLS disables TLS certificate verification for HTTP endpoints.
+	// Off by default; enabled only for explicitly authorized endpoints that
+	// legitimately serve internally-signed certificates.
+	InsecureTLS bool
 }
 
 func (o *Options) withDefaults() *Options {
@@ -56,6 +64,9 @@ func (o *Options) withDefaults() *Options {
 	}
 	if o.MaxInputSize == 0 {
 		o.MaxInputSize = 4 << 20 // 4 MiB
+	}
+	if o.MaxOutput == 0 {
+		o.MaxOutput = 4 << 20 // 4 MiB
 	}
 	if o.HTTPTimeout == 0 {
 		o.HTTPTimeout = 5 * time.Second
@@ -137,10 +148,13 @@ func (r *processRunner) Exec(ctx context.Context, input []byte, timeout time.Dur
 	defer cancel()
 
 	cmd := exec.CommandContext(ctx, r.target.Path, argv...)
+	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 	if stdin != nil {
 		cmd.Stdin = stdin
 	}
-	var stdout, stderr bytesBuffer
+	var stdout, stderr cappedBuffer
+	stdout.max = r.opts.MaxOutput
+	stderr.max = r.opts.MaxOutput
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 
@@ -149,18 +163,19 @@ func (r *processRunner) Exec(ctx context.Context, input []byte, timeout time.Dur
 	elapsed := time.Since(start)
 
 	res := &models.ExecutionResult{
-		Stdout:     stdout.Bytes(),
-		Stderr:     stderr.Bytes(),
-		StdoutSize: stdout.Len(),
-		StderrSize: stderr.Len(),
-		Duration:   elapsed,
-		ExitClass:  models.ClassNormalSuccess,
+		Stdout:          stdout.Bytes(),
+		Stderr:          stderr.Bytes(),
+		StdoutSize:      stdout.Len(),
+		StderrSize:      stderr.Len(),
+		OutputTruncated: stdout.Capped() || stderr.Capped(),
+		Duration:        elapsed,
+		ExitClass:       models.ClassNormalSuccess,
 	}
 
 	if ctx.Err() == context.DeadlineExceeded {
 		res.TimedOut = true
 		res.ExitClass = models.ClassUnexpected
-		_ = cmd.Process.Kill()
+		killProcessGroup(cmd)
 		return res, nil
 	}
 
@@ -234,19 +249,46 @@ func failResult(err error) *models.ExecutionResult {
 	return &models.ExecutionResult{Failed: true, Error: err.Error()}
 }
 
-// bytesBuffer is a concurrency-safe-free minimal []byte sink optimized for a
-// single writer (the child process).
-type bytesBuffer struct {
-	b []byte
+// killProcessGroup terminates the child process group so backgrounded
+// grandchildren are not left running after a timeout. Falls back to killing
+// the direct child.
+func killProcessGroup(cmd *exec.Cmd) {
+	if cmd.Process == nil {
+		return
+	}
+	if err := syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL); err == nil {
+		return
+	}
+	_ = cmd.Process.Kill()
 }
 
-func (b *bytesBuffer) Write(p []byte) (int, error) {
-	b.b = append(b.b, p...)
+// cappedBuffer accumulates up to max bytes, then consumes and discards the
+// excess so a chatty child process never blocks on a full pipe and the runner
+// never exhausts memory on the hot path.
+type cappedBuffer struct {
+	b    []byte
+	max  int
+	over bool
+}
+
+func (b *cappedBuffer) Write(p []byte) (int, error) {
+	if len(b.b) < b.max {
+		room := b.max - len(b.b)
+		if len(p) > room {
+			b.b = append(b.b, p[:room]...)
+			b.over = true
+		} else {
+			b.b = append(b.b, p...)
+		}
+	} else if len(p) > 0 {
+		b.over = true
+	}
 	return len(p), nil
 }
 
-func (b *bytesBuffer) Bytes() []byte { return b.b }
-func (b *bytesBuffer) Len() int      { return len(b.b) }
+func (b *cappedBuffer) Bytes() []byte { return b.b }
+func (b *cappedBuffer) Len() int      { return len(b.b) }
+func (b *cappedBuffer) Capped() bool  { return b.over }
 
 func newBytesReader(p []byte) io.Reader { return &sliceReader{p: p} }
 

@@ -8,6 +8,7 @@ import (
 
 	errs "github.com/QYVORA/qyvora-sekhmet/internal/errors"
 	"github.com/QYVORA/qyvora-sekhmet/internal/execution"
+	"github.com/QYVORA/qyvora-sekhmet/internal/exitcode"
 	"github.com/QYVORA/qyvora-sekhmet/internal/minimization"
 	"github.com/QYVORA/qyvora-sekhmet/pkg/models"
 )
@@ -35,13 +36,14 @@ func newMinimizeCmd() *cobra.Command {
 				UseStdin:    true,
 				Args:        t.Args,
 				HTTPTimeout: timeoutOr(timeout, 5*time.Second),
+				InsecureTLS: app.insecureTLS,
 			})
 			if err != nil {
 				return errs.WrapExitError(2, "building runner", err)
 			}
 			defer func() { _ = runner.Close() }()
 
-			base, err := buildBaseline(runner)
+			base, err := buildBaseline(cmd.Context(), runner)
 			if err != nil {
 				return errs.WrapExitError(1, "profiling baseline", err)
 			}
@@ -69,6 +71,9 @@ func newMinimizeCmd() *cobra.Command {
 				return errs.WrapExitError(1, "writing minimized input", err)
 			}
 			app.emitf("minimized %d -> %d bytes (%s)", len(data), len(reduced), out)
+			if cmd.Context().Err() != nil {
+				return errs.NewExitError(exitcode.Interrupted, "minimization interrupted")
+			}
 			return nil
 		},
 	}

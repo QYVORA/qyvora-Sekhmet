@@ -64,6 +64,22 @@ All notable changes to SEKHMET are documented here. This project follows
 
 - Hot path (select → mutate → execute → classify → feedback) tuned for high
   throughput with async deep analysis off the critical path.
+- **TLS verification is now the default** for `<target http|https>` execution;
+  the new `--insecure-tls` flag opts into `InsecureSkipVerify` for testing
+  servers with self-signed certificates.
+- **Executable output is truncated at 4 MiB** (`execution.Options.MaxOutput`,
+  sourced from `safety.DefaultLimits().MaxOutputBytes` in `fuzz`) using a
+  capped buffer that drains without recording; results carry
+  `output_truncated`. Helpers that previously read whole files
+  (`readSeedFile`) now cap corpus loads at 64 MiB and return errors instead
+  of panicking.
+- **Process-group termination** — timed-out subprocesses are killed as a
+  process group (`Setpgid` + `kill(-pid, SIGKILL)`) so child processes cannot
+  outlive the runner; command output collection no longer buffers unbounded
+  data.
+- **Interrupt handling** — `fuzz`, `baseline`, `minimize` and `replay`
+  persist current state and exit 130 on SIGINT/SIGTERM instead of propagating
+  a raw abort.
 
 ### Fixed
 

@@ -8,6 +8,7 @@ import (
 
 	errs "github.com/QYVORA/qyvora-sekhmet/internal/errors"
 	"github.com/QYVORA/qyvora-sekhmet/internal/execution"
+	"github.com/QYVORA/qyvora-sekhmet/internal/exitcode"
 )
 
 func newReplayCmd() *cobra.Command {
@@ -32,6 +33,7 @@ func newReplayCmd() *cobra.Command {
 				UseStdin:    true,
 				Args:        t.Args,
 				HTTPTimeout: timeoutOr(timeout, 5*time.Second),
+				InsecureTLS: app.insecureTLS,
 			})
 			if err != nil {
 				return errs.WrapExitError(2, "building runner", err)
@@ -54,6 +56,9 @@ func newReplayCmd() *cobra.Command {
 			app.emitf("timeout:  %v", res.TimedOut)
 			app.emitf("stdout:   %d bytes", res.StdoutSize)
 			app.emitf("stderr:   %d bytes", res.StderrSize)
+			if cmd.Context().Err() != nil {
+				return errs.NewExitError(exitcode.Interrupted, "replay interrupted")
+			}
 			return nil
 		},
 	}

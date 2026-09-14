@@ -8,6 +8,7 @@ import (
 	"github.com/QYVORA/qyvora-sekhmet/internal/corpus"
 	errs "github.com/QYVORA/qyvora-sekhmet/internal/errors"
 	"github.com/QYVORA/qyvora-sekhmet/internal/execution"
+	"github.com/QYVORA/qyvora-sekhmet/internal/exitcode"
 	"github.com/QYVORA/qyvora-sekhmet/internal/fuzz"
 	"github.com/QYVORA/qyvora-sekhmet/internal/mutation"
 	"github.com/QYVORA/qyvora-sekhmet/internal/safety"
@@ -44,6 +45,8 @@ func newFuzzCmd() *cobra.Command {
 				UseStdin:    true,
 				Args:        t.Args,
 				HTTPTimeout: timeoutOr(timeout, 5*time.Second),
+				MaxOutput:   int(safety.DefaultLimits().MaxOutputBytes),
+				InsecureTLS: app.insecureTLS,
 			})
 			if err != nil {
 				return errs.WrapExitError(2, "building target runner", err)
@@ -51,7 +54,7 @@ func newFuzzCmd() *cobra.Command {
 			defer func() { _ = runner.Close() }()
 
 			// Baseline first: never fuzz blindly.
-			built, err := buildBaseline(runner)
+			built, err := buildBaseline(cmd.Context(), runner)
 			if err != nil {
 				return errs.WrapExitError(1, "baseline profiling before fuzz", err)
 			}
@@ -89,6 +92,9 @@ func newFuzzCmd() *cobra.Command {
 
 			res, sess, err := fuzz.New(campaign).Run(cmd.Context())
 			if err != nil {
+				if cmd.Context().Err() != nil {
+					return errs.NewExitError(exitcode.Interrupted, "campaign interrupted")
+				}
 				return errs.WrapExitError(1, "campaign failed", err)
 			}
 			sess.Result = buildSessionResult(res, sess.ID, t.ID, workers)
@@ -100,6 +106,9 @@ func newFuzzCmd() *cobra.Command {
 			app.emitf("session saved: %s", path)
 			printCampaignSummary(res)
 			printFindingsSummary(sess)
+			if cmd.Context().Err() != nil {
+				return errs.NewExitError(exitcode.Interrupted, "campaign interrupted; partial session saved")
+			}
 			return nil
 		},
 	}

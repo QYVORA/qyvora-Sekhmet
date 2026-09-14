@@ -1,7 +1,6 @@
 package cli
 
 import (
-	"errors"
 	"os"
 
 	"github.com/spf13/cobra"
@@ -39,7 +38,11 @@ func newCorpusImportCmd() *cobra.Command {
 					}
 					added += n
 				} else {
-					if _, ok := c.AddBytes(mustRead(p), source); ok {
+					b, err := readSeedFile(p)
+					if err != nil {
+						return errs.WrapExitError(2, "reading seed", err)
+					}
+					if _, ok := c.AddBytes(b, source); ok {
 						added++
 					}
 				}
@@ -103,14 +106,6 @@ func newCorpusCropCmd() *cobra.Command {
 	return cmd
 }
 
-func mustRead(p string) []byte {
-	b, err := os.ReadFile(p)
-	if err != nil {
-		panic(err)
-	}
-	return b
-}
-
 func itoaPre(n int) string {
 	if n <= 0 {
 		return "0"
@@ -122,5 +117,3 @@ func itoaPre(n int) string {
 	}
 	return out
 }
-
-var _ = errors.New

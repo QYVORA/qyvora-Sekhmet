@@ -1,7 +1,6 @@
 package cli
 
 import (
-	"context"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -9,6 +8,7 @@ import (
 	"github.com/QYVORA/qyvora-sekhmet/internal/baseline"
 	errs "github.com/QYVORA/qyvora-sekhmet/internal/errors"
 	"github.com/QYVORA/qyvora-sekhmet/internal/execution"
+	"github.com/QYVORA/qyvora-sekhmet/internal/exitcode"
 	"github.com/QYVORA/qyvora-sekhmet/pkg/models"
 )
 
@@ -24,7 +24,7 @@ func newBaselineCmd() *cobra.Command {
 followed by sampled executions. sekhmet uses this baseline to classify crashes,
 hangs and anomalies rather than fuzzing blindly.`,
 		Args: cobra.NoArgs,
-		RunE: func(_ *cobra.Command, _ []string) error {
+		RunE: func(cmd *cobra.Command, _ []string) error {
 			t, err := app.requireTarget()
 			if err != nil {
 				return err
@@ -33,6 +33,7 @@ hangs and anomalies rather than fuzzing blindly.`,
 				UseStdin:    true,
 				Args:        t.Args,
 				HTTPTimeout: parseDurationOpt(app.timeout, 5*time.Second),
+				InsecureTLS: app.insecureTLS,
 			})
 			if err != nil {
 				return errs.WrapExitError(2, "building target runner", err)
@@ -42,12 +43,15 @@ hangs and anomalies rather than fuzzing blindly.`,
 			app.emitf("profiling target %s (%d samples, %d warmup)...",
 				t.DisplayName(), samples, warmupEqual(warmup))
 
-			base, err := baseline.Profile(context.Background(), runner, &baseline.Options{
+			base, err := baseline.Profile(cmd.Context(), runner, &baseline.Options{
 				Warmup:  warmup,
 				Samples: samples,
 			})
 			if err != nil {
 				return errs.WrapExitError(1, "baseline profiling failed", err)
+			}
+			if cmd.Context().Err() != nil {
+				return errs.NewExitError(exitcode.Interrupted, "baseline profiling interrupted")
 			}
 			if app.printer.Format() == outputFormatJSON || app.printer.Format() == outputFormatYAML {
 				app.printer.Print(base)
