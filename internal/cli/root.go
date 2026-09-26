@@ -63,6 +63,12 @@ var rootCmd = &cobra.Command{
 		if app.initErr != nil {
 			return errs.NewExitError(2, app.initErr.Error())
 		}
+		if app.stdoutOwned && app.printer.Format() != output.FormatTerminal {
+			// stdout must carry exactly one machine stream. With the event
+			// JSONL stream owning stdout, a machine report format cannot share
+			// it: use --events stderr or --events <file>.
+			return errs.NewExitError(2, "cannot combine --events stdout with a machine report format; use --events stderr or --events <file>")
+		}
 		return nil
 	},
 	Args: func(_ *cobra.Command, args []string) error {

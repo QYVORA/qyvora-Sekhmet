@@ -38,18 +38,28 @@ func TestPrintHTMLTable(t *testing.T) {
 
 func TestPrintMarkdownValue(t *testing.T) {
 	out := renderFormat(FormatMarkdown, map[string]any{"rule": "ADM-001"}, false)
-	if !strings.HasPrefix(out, "```yaml") || !strings.Contains(out, "ADM-001") || !strings.HasSuffix(out, "```\n") {
-		t.Fatalf("markdown value malformed:\n%s", out)
+	if !strings.HasPrefix(out, "## ") || !strings.Contains(out, "**rule**") || !strings.Contains(out, "ADM-001") {
+		t.Fatalf("markdown value is not real markdown:\n%s", out)
+	}
+	if strings.Contains(out, "```yaml") {
+		t.Fatalf("markdown value leaked a YAML fence:\n%s", out)
 	}
 }
 
 func TestPrintHTMLValue(t *testing.T) {
 	out := renderFormat(FormatHTML, []string{"<script>"}, false)
-	if !strings.HasPrefix(out, "<pre>") || !strings.HasSuffix(out, "</pre>\n") {
-		t.Fatalf("html value malformed:\n%s", out)
+	full := ""
+	if !strings.HasPrefix(out, "<!doctype html>") || !strings.Contains(out, "<body>") || !strings.Contains(out, "</html>") {
+		t.Fatalf("html value is not a real HTML document:\n%s", out)
+	}
+	if strings.Contains(out, "<pre>") {
+		t.Fatalf("html value reverted to escaped JSON block:\n%s", out)
 	}
 	if strings.Contains(out, "<script>") {
 		t.Fatalf("html value leaked unescaped markup:\n%s", out)
+	}
+	if !strings.Contains(out, "&lt;script&gt;") {
+		t.Fatalf("html value did not escape injected markup:\n%s", full)
 	}
 }
 

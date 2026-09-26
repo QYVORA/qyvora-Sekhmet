@@ -38,6 +38,10 @@ func newAnalyzeCmd() *cobra.Command {
 				app.printer.Print(findings)
 				return nil
 			}
+			if app.printer.Format() == outputFormatMD || app.printer.Format() == outputFormatHTML {
+				app.printer.Print(findings)
+				return nil
+			}
 			sum := summarizeFindings(sess)
 			app.emitf("session %-8s %s", sess.ID, sess.State)
 			app.emitf("  total findings: %d", sum.Total)

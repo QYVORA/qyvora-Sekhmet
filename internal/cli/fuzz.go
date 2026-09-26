@@ -1,16 +1,21 @@
 package cli
 
 import (
+	"fmt"
+	"os"
+	"strings"
 	"time"
 
 	"github.com/spf13/cobra"
 
 	"github.com/QYVORA/qyvora-sekhmet/internal/corpus"
 	errs "github.com/QYVORA/qyvora-sekhmet/internal/errors"
+	"github.com/QYVORA/qyvora-sekhmet/internal/events"
 	"github.com/QYVORA/qyvora-sekhmet/internal/execution"
 	"github.com/QYVORA/qyvora-sekhmet/internal/exitcode"
 	"github.com/QYVORA/qyvora-sekhmet/internal/fuzz"
 	"github.com/QYVORA/qyvora-sekhmet/internal/mutation"
+	"github.com/QYVORA/qyvora-sekhmet/internal/output"
 	"github.com/QYVORA/qyvora-sekhmet/internal/safety"
 	"github.com/QYVORA/qyvora-sekhmet/internal/scheduler"
 	"github.com/QYVORA/qyvora-sekhmet/pkg/models"
@@ -89,6 +94,12 @@ func newFuzzCmd() *cobra.Command {
 
 			app.emitf("campaign: %d workers, max %d executions, runtime %s",
 				workers, executions, runtimeString(runtime))
+			app.emitEvent(events.ScanStarted, map[string]any{
+				"target": t.DisplayName(), "strategy": strategy, "workers": workers,
+			})
+			app.emitEvent(events.CampaignStarted, map[string]any{
+				"target": t.DisplayName(), "strategy": strategy, "workers": workers,
+			})
 
 			res, sess, err := fuzz.New(campaign).Run(cmd.Context())
 			if err != nil {
@@ -106,8 +117,29 @@ func newFuzzCmd() *cobra.Command {
 			app.emitf("session saved: %s", path)
 			printCampaignSummary(res)
 			printFindingsSummary(sess)
+			app.emitEvent(events.CampaignCompleted, map[string]any{
+				"executions": res.Executions, "unique_crashes": res.UniqueCrashes,
+				"new_behaviors": res.NewBehaviors, "corpus_size": res.CorpusSize,
+			})
+			app.emitEvent(events.ScanCompleted, map[string]any{
+				"session": sess.ID, "crashes": len(sess.Crashes), "findings": len(sess.Findings),
+			})
 			if cmd.Context().Err() != nil {
 				return errs.NewExitError(exitcode.Interrupted, "campaign interrupted; partial session saved")
+			}
+			// Machine formats render the full session on stdout (the fixed
+			// contract: `fuzz -o json` must never emit zero bytes). Human
+			// summaries above already routed to stderr in machine mode.
+			if app.printer.Format() != output.FormatTerminal {
+				body := renderSessionFormatted(sess, app.printer.Format())
+				out := app.printer.Writer()
+				if app.stdoutOwned {
+					out = os.Stderr
+				}
+				_, _ = out.Write([]byte(body))
+				if !strings.HasSuffix(body, "\n") {
+					_, _ = fmt.Fprintln(out)
+				}
 			}
 			return nil
 		},
@@ -206,6 +238,13 @@ func corpusDir() string {
 func appEmitEvent(level, name string, data map[string]any) {
 	if app.eventStream != nil {
 		app.eventStream.Emit(level, name, data)
+	}
+}
+
+// emitEvent emits an informational event on the active JSONL stream.
+func (a *appState) emitEvent(name string, data map[string]any) {
+	if a.eventStream != nil {
+		a.eventStream.Emit(events.LevelInfo, name, data)
 	}
 }
 

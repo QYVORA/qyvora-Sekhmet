@@ -10,6 +10,7 @@ import (
 
 	errs "github.com/QYVORA/qyvora-sekhmet/internal/errors"
 	"github.com/QYVORA/qyvora-sekhmet/internal/events"
+	"github.com/QYVORA/qyvora-sekhmet/internal/exitcode"
 	"github.com/QYVORA/qyvora-sekhmet/internal/logger"
 	"github.com/QYVORA/qyvora-sekhmet/internal/output"
 	"github.com/QYVORA/qyvora-sekhmet/internal/session"
@@ -26,6 +27,10 @@ type appState struct {
 
 	eventStream *events.Stream
 	eventSink   io.Writer
+
+	// stdoutOwned is set when --events stdout is active: stdout then carries
+	// only the JSONL event stream, so report rendering routes to stderr.
+	stdoutOwned bool
 
 	cfgFile     string
 	verbose     bool
@@ -50,7 +55,7 @@ func (a *appState) requireTarget() (*models.Target, error) {
 		return nil, errs.NewExitError(2, "no target selected; run 'sekhmet target set' first")
 	}
 	if !t.Authorized() && !t.Sim {
-		return nil, errs.NewExitError(2, "current target is not authorized: "+t.DisplayName())
+		return nil, errs.NewExitError(exitcode.AuthorizationRefused, "current target is not authorized: "+t.DisplayName())
 	}
 	return t, nil
 }
@@ -81,6 +86,10 @@ func (a *appState) resolveEvents(_ context.Context) error {
 		return nil
 	case "stdout":
 		w = os.Stdout
+		a.stdoutOwned = true
+		// stdout carries only the JSONL event stream; route every human and
+		// report line off it.
+		a.printer.SetWriter(os.Stderr)
 	case "stderr":
 		w = os.Stderr
 	default:

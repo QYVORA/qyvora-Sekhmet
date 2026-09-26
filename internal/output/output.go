@@ -210,25 +210,11 @@ func (p *Printer) printYAML(v any) {
 }
 
 func (p *Printer) printMarkdown(v any) {
-	out, err := yaml.Marshal(v)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "markdown error: %v\n", err)
-		return
-	}
-	_, _ = p.writer.Write([]byte("```yaml\n"))
-	_, _ = p.writer.Write(out)
-	_, _ = p.writer.Write([]byte("```\n"))
+	_, _ = p.writer.Write([]byte(renderMarkdown(v)))
 }
 
 func (p *Printer) printHTML(v any) {
-	data, err := json.MarshalIndent(v, "", "  ")
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "html error: %v\n", err)
-		return
-	}
-	_, _ = p.writer.Write([]byte("<pre>"))
-	_, _ = p.writer.Write([]byte(html.EscapeString(string(data))))
-	_, _ = p.writer.Write([]byte("</pre>\n"))
+	_, _ = p.writer.Write([]byte(renderHTML(v)))
 }
 
 func padRow(header []string, row []string) []string {

@@ -7,10 +7,29 @@ import (
 
 	"github.com/QYVORA/qyvora-sekhmet/internal/baseline"
 	errs "github.com/QYVORA/qyvora-sekhmet/internal/errors"
+	"github.com/QYVORA/qyvora-sekhmet/internal/events"
 	"github.com/QYVORA/qyvora-sekhmet/internal/execution"
 	"github.com/QYVORA/qyvora-sekhmet/internal/exitcode"
 	"github.com/QYVORA/qyvora-sekhmet/pkg/models"
 )
+
+// baselineSampleCount reports the number of profile samples observed, or 0
+// when no timing profile is available yet.
+func baselineSampleCount(base *models.Baseline) int {
+	if base == nil || base.Timing == nil {
+		return 0
+	}
+	return base.Timing.Samples
+}
+
+// baselineExitCodes reports the distinct exit codes observed as normal, or
+// nil when no exit profile is available yet.
+func baselineExitCodes(base *models.Baseline) []int {
+	if base == nil || base.ExitProfile == nil {
+		return nil
+	}
+	return base.ExitProfile.ExitCodes
+}
 
 func newBaselineCmd() *cobra.Command {
 	var (
@@ -42,6 +61,10 @@ hangs and anomalies rather than fuzzing blindly.`,
 
 			app.emitf("profiling target %s (%d samples, %d warmup)...",
 				t.DisplayName(), samples, warmupEqual(warmup))
+			app.emitEvent(events.ScanStarted, map[string]any{"target": t.DisplayName()})
+			app.emitEvent(events.BaselineStarted, map[string]any{
+				"target": t.DisplayName(), "samples": samples, "warmup": warmup,
+			})
 
 			base, err := baseline.Profile(cmd.Context(), runner, &baseline.Options{
 				Warmup:  warmup,
@@ -53,6 +76,10 @@ hangs and anomalies rather than fuzzing blindly.`,
 			if cmd.Context().Err() != nil {
 				return errs.NewExitError(exitcode.Interrupted, "baseline profiling interrupted")
 			}
+			app.emitEvent(events.BaselineCompleted, map[string]any{
+				"exit_codes": baselineExitCodes(base), "samples": baselineSampleCount(base),
+			})
+			app.emitEvent(events.ScanCompleted, map[string]any{"baseline": "completed"})
 			if app.printer.Format() == outputFormatJSON || app.printer.Format() == outputFormatYAML {
 				app.printer.Print(base)
 				return nil
