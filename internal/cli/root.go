@@ -77,9 +77,6 @@ var rootCmd = &cobra.Command{
 		}
 		return nil
 	},
-	RunE: func(cmd *cobra.Command, _ []string) error {
-		return runConsole(cmd.Context())
-	},
 }
 
 // Execute runs the root command against os.Args and returns the process exit
@@ -93,6 +90,18 @@ func Execute() int {
 func ExecuteArgs(args []string) int {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
+	return ExecuteArgsContext(ctx, args)
+}
+
+// ExecuteArgsContext runs the root command with an explicit argument vector
+// under a caller-supplied context.
+//
+// The interactive TUI needs this form: it runs commands in-process on its own
+// goroutine and must be able to cancel one execution without tearing down the
+// process. Driving the work from a context it owns, rather than from
+// process-wide signal handling, is what makes Ctrl+C cancel the operation
+// instead of the interface.
+func ExecuteArgsContext(ctx context.Context, args []string) int {
 	rootCmd.SetContext(ctx)
 	rootCmd.SetArgs(args)
 
@@ -116,6 +125,15 @@ func ExecuteArgs(args []string) int {
 }
 
 func init() {
+	// The default action opens the interactive TUI. It is assigned here rather
+	// than in the rootCmd literal because Go's initialization dependency
+	// analysis follows references through function bodies: runTUI reaches
+	// rootCmd, so naming it inside rootCmd's own initializer is a cycle.
+	// Assigning in init is exempt from that analysis.
+	rootCmd.RunE = func(cmd *cobra.Command, _ []string) error {
+		return runTUI(cmd.Root(), cmd.Context())
+	}
+
 	cobra.OnInitialize(initConfig)
 
 	rootCmd.SetFlagErrorFunc(func(_ *cobra.Command, err error) error {
@@ -135,6 +153,7 @@ func init() {
 
 	rootCmd.PersistentFlags().BoolP("authorized", "y", false, "confirm authorization scope non-interactively")
 
+	rootCmd.AddCommand(commandTUI())
 	rootCmd.AddCommand(newVersionCmd())
 	rootCmd.AddCommand(newCapabilitiesCmd())
 	rootCmd.AddCommand(newCompletionCmd())
@@ -158,6 +177,13 @@ func init() {
 // target manager and session store. Failures are recorded as init errors so
 // ExecuteArgs can report them without calling os.Exit.
 func initConfig() {
+	// The interactive TUI runs this command tree repeatedly in-process, so
+	// every invocation starts from clean state. Without this, a flag set by one
+	// run would silently apply to the next: stdoutOwned in particular decides
+	// whether stdout is allowed to carry a machine report, and a stale true
+	// would make an unrelated later command fail.
+	app.stdoutOwned = false
+
 	v, err := config.Load(app.cfgFile)
 	if err != nil {
 		app.initErr = errs.WrapExitError(2, "loading config", err)
