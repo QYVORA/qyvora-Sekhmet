@@ -3,7 +3,7 @@ module github.com/QYVORA/qyvora-sekhmet
 go 1.26.5
 
 require (
-	github.com/QYVORA/qyvora-tui v0.5.1
+	github.com/QYVORA/qyvora-tui v0.6.0
 	github.com/chzyer/readline v1.5.1
 	github.com/fatih/color v1.19.0
 	github.com/spf13/cobra v1.10.2
