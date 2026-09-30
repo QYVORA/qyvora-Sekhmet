@@ -20,7 +20,7 @@ impressive. Every high-level operation requires explicit target authorization.
 Requirements: Go 1.26+, `mage`/`make`.
 
 ```sh
-git clone https://github.com/QYVORA/qyvora-Sekhmet.git
+git clone https://github.com/QYVORA/qyvora-sekhmet.git
 cd qyvora-sekhmet
 make check        # gofmt + vet + test
 make test-race    # full suite with the race detector

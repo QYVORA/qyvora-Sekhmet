@@ -90,9 +90,9 @@ entry / Start Menu):
 
 ```sh
 # Linux / macOS
-curl -fsSL https://raw.githubusercontent.com/QYVORA/qyvora-Sekhmet/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/QYVORA/qyvora-sekhmet/main/install.sh | bash
 # Windows (PowerShell)
-irm https://raw.githubusercontent.com/QYVORA/qyvora-Sekhmet/main/install.ps1 | iex
+irm https://raw.githubusercontent.com/QYVORA/qyvora-sekhmet/main/install.ps1 | iex
 ```
 
 ## Quick start
