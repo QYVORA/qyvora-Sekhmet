@@ -12,7 +12,7 @@ All notable changes to SEKHMET are documented here. This project follows
   official QYVORA contact details (website, support, location), surfaced by
   `sekhmet version` in terminal and machine formats.
 - **Contact details** — the `version` command, README, and `SECURITY.md`
-  surface official QYVORA contact: https://qyvora.netlify.app ·
+  surface official QYVORA contact: https://qyvora.org ·
   qyvorasec@gmail.com · Tamale, Ghana.
 - **Full markdown/HTML output** — `Print`/`PrintTable` render real markdown
   and HTML (no plain-text fallthrough) for `--output markdown|html`.
