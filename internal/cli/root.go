@@ -23,6 +23,9 @@ import (
 	"github.com/QYVORA/qyvora-sekhmet/internal/target"
 	"github.com/QYVORA/qyvora-sekhmet/internal/version"
 )
+var updateFlag bool
+
+
 
 var app = newAppState()
 
@@ -105,6 +108,15 @@ func ExecuteArgsContext(ctx context.Context, args []string) int {
 	rootCmd.SetContext(ctx)
 	rootCmd.SetArgs(args)
 
+	// If --update is passed, route to the update subcommand regardless of
+	// other positional arguments. This preserves compatibility with "tool --update".
+	for _, a := range args {
+		if a == "--update" || a == "-update" || a == "--update=true" {
+			rootCmd.SetArgs([]string{"update"})
+			break
+		}
+	}
+
 	if err := rootCmd.Execute(); err != nil {
 		var exitErr *errs.ExitError
 		if errors.As(err, &exitErr) {
@@ -150,6 +162,7 @@ func init() {
 	pf.BoolVar(&app.dryRun, "dry-run", false, "resolve and print the fuzzing plan without executing")
 	pf.StringVar(&app.timeout, "timeout", "", "default timeout for executions (e.g. 1s)")
 	pf.BoolVar(&app.insecureTLS, "insecure-tls", false, "disable TLS certificate verification for HTTP endpoints (authorized testing only)")
+	pf.BoolVar(&updateFlag, "update", false, "update the CLI to the latest official release")
 
 	rootCmd.PersistentFlags().BoolP("authorized", "y", false, "confirm authorization scope non-interactively")
 
