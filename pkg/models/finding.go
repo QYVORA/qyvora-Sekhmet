@@ -21,6 +21,15 @@ const (
 	StatusInformational FindingStatus = "informational"
 )
 
+// Tier represents the capability tier that generated a finding
+type Tier string
+
+const (
+	TierRecon        Tier = "recon"        // Tier 1: Discovery and enumeration
+	TierTechnique    Tier = "technique"    // Tier 2: Vulnerability identification
+	TierExploitation Tier = "exploitation" // Tier 3: Active exploitation
+)
+
 // ParseFindingStatus normalizes an arbitrary string to a known status.
 func ParseFindingStatus(s string) FindingStatus {
 	switch FindingStatus(s) {
@@ -64,6 +73,7 @@ type Finding struct {
 	Severity       Severity              `json:"severity"`
 	Confidence     Confidence            `json:"confidence"`
 	Status         FindingStatus         `json:"status"`
+	Tier           Tier                  `json:"tier,omitempty"` // Capability tier that generated this finding
 	InputRef       string                `json:"input_ref,omitempty"`
 	CrashSign      string                `json:"crash_signature,omitempty"`
 	Coverage       string                `json:"coverage,omitempty"`
@@ -71,6 +81,20 @@ type Finding struct {
 	Attributes     map[string]string     `json:"attributes,omitempty"`
 	References     []string              `json:"references,omitempty"`
 	Timestamp      time.Time             `json:"timestamp"`
+}
+
+// TierPrefix returns a display prefix for the finding's tier
+func (f *Finding) TierPrefix() string {
+	switch f.Tier {
+	case TierRecon:
+		return "[RECON]"
+	case TierTechnique:
+		return "[TECHNIQUE]"
+	case TierExploitation:
+		return "[EXPLOIT]"
+	default:
+		return ""
+	}
 }
 
 // AddEvidence appends an evidence record, deduplicating by content hash.
