@@ -119,21 +119,5 @@ func (e *exitStatusError) Error() string {
 // deliberately does not depend on Cobra -- which command framework a tool uses
 // is the tool's choice, not the interface's.
 func tuiCommands(root *cobra.Command) []tui.Command {
-	return tui.CollectCommands(cobraNode{root})
-}
-
-// cobraNode adapts a Cobra command to the TUI's command-tree interface.
-type cobraNode struct{ c *cobra.Command }
-
-func (n cobraNode) Name() string      { return n.c.Name() }
-func (n cobraNode) Short() string     { return n.c.Short }
-func (n cobraNode) Hidden() bool      { return n.c.Hidden }
-func (n cobraNode) Aliases() []string { return n.c.Aliases }
-
-func (n cobraNode) Children() []tui.CommandNode {
-	out := make([]tui.CommandNode, 0, len(n.c.Commands()))
-	for _, c := range n.c.Commands() {
-		out = append(out, cobraNode{c})
-	}
-	return out
+	return tui.CobraCommands(root)
 }
