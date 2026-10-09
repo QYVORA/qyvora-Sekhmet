@@ -71,13 +71,15 @@ func (c *Console) registerBuiltins() {
 
 // printBanner writes the canonical startup banner followed by a short footer.
 //
-// The banner is drawn through banner.Render, which resolves the QYVORA accent
-// from the environment once. This console writes straight to stdout rather than
-// through a colour-aware writer, so the environment is the only signal available
-// here: a NO_COLOR request, or a terminal that cannot show the accent, gets the
-// plain art.
+// The banner is drawn through banner.RenderCLI, which resolves the QYVORA
+// accent from the environment once per line. This console writes straight to
+// stdout rather than through a colour-aware writer, so the environment is the
+// only signal available here: a NO_COLOR request, or a terminal that cannot
+// show the accent, gets the plain art.
 func printBanner() {
-	fmt.Print(banner.Render())
+	for _, line := range banner.RenderCLI() {
+		fmt.Println(banner.Colorize(line))
+	}
 }
 
 type errQuit struct{}
