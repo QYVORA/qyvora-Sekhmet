@@ -26,7 +26,7 @@ const (
 )
 
 var (
-	Version   = "0.1.0"
+	Version   = "dev"
 	Commit    = "none"
 	Date      = "unknown"
 	BuildUser = "unknown"

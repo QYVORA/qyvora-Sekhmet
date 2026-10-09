@@ -23,9 +23,8 @@ import (
 	"github.com/QYVORA/qyvora-sekhmet/internal/target"
 	"github.com/QYVORA/qyvora-sekhmet/internal/version"
 )
+
 var updateFlag bool
-
-
 
 var app = newAppState()
 
@@ -143,6 +142,9 @@ func init() {
 	// rootCmd, so naming it inside rootCmd's own initializer is a cycle.
 	// Assigning in init is exempt from that analysis.
 	rootCmd.RunE = func(cmd *cobra.Command, _ []string) error {
+		if app.noTui {
+			return cmd.Root().Help()
+		}
 		return runTUI(cmd.Root(), cmd.Context())
 	}
 
@@ -160,6 +162,7 @@ func init() {
 	pf.BoolVar(&app.jsonOut, "json", false, "output in JSON format (shorthand for --output json)")
 	pf.StringVar(&app.eventsF, "events", "", "emit a JSONL event stream to stdout, stderr, or a file path")
 	pf.BoolVar(&app.dryRun, "dry-run", false, "resolve and print the fuzzing plan without executing")
+	pf.BoolVar(&app.noTui, "no-tui", false, "Disable TUI and print banner/help")
 	pf.StringVar(&app.timeout, "timeout", "", "default timeout for executions (e.g. 1s)")
 	pf.BoolVar(&app.insecureTLS, "insecure-tls", false, "disable TLS certificate verification for HTTP endpoints (authorized testing only)")
 	pf.BoolVar(&updateFlag, "update", false, "update the CLI to the latest official release")
