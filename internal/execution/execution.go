@@ -148,7 +148,7 @@ func (r *processRunner) Exec(ctx context.Context, input []byte, timeout time.Dur
 	defer cancel()
 
 	cmd := exec.CommandContext(ctx, r.target.Path, argv...)
-	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+	setProcessGroup(cmd)
 	if stdin != nil {
 		cmd.Stdin = stdin
 	}
@@ -249,18 +249,10 @@ func failResult(err error) *models.ExecutionResult {
 	return &models.ExecutionResult{Failed: true, Error: err.Error()}
 }
 
-// killProcessGroup terminates the child process group so backgrounded
-// grandchildren are not left running after a timeout. Falls back to killing
-// the direct child.
-func killProcessGroup(cmd *exec.Cmd) {
-	if cmd.Process == nil {
-		return
-	}
-	if err := syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL); err == nil {
-		return
-	}
-	_ = cmd.Process.Kill()
-}
+// killProcessGroup is provided per-platform in processgroup_*.go: it
+// terminates the child process group so backgrounded grandchildren are not
+// left running after a timeout, falling back to killing the direct child
+// where process groups are not available.
 
 // cappedBuffer accumulates up to max bytes, then consumes and discards the
 // excess so a chatty child process never blocks on a full pipe and the runner
