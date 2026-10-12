@@ -17,6 +17,7 @@ import (
 	"github.com/chzyer/readline"
 
 	"github.com/QYVORA/qyvora-sekhmet/internal/banner"
+	"github.com/QYVORA/qyvora-tui"
 )
 
 // Cmd is a dispatchable console command.
@@ -77,6 +78,9 @@ func (c *Console) registerBuiltins() {
 // only signal available here: a NO_COLOR request, or a terminal that cannot
 // show the accent, gets the plain art.
 func printBanner() {
+	if tui.InTUISession() {
+		return
+	}
 	for _, line := range banner.RenderCLI() {
 		fmt.Println(banner.Colorize(line))
 	}
