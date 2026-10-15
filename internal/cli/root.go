@@ -136,16 +136,11 @@ func ExecuteArgsContext(ctx context.Context, args []string) int {
 }
 
 func init() {
-	// The default action opens the interactive TUI. It is assigned here rather
-	// than in the rootCmd literal because Go's initialization dependency
-	// analysis follows references through function bodies: runTUI reaches
-	// rootCmd, so naming it inside rootCmd's own initializer is a cycle.
-	// Assigning in init is exempt from that analysis.
+	// The bare invocation is one-shot CLI only: print usage rather than drop
+	// into an interactive interface. The per-tool TUI and console REPL are
+	// disabled pending the redirect of qyvora-tui to the future AI layer.
 	rootCmd.RunE = func(cmd *cobra.Command, _ []string) error {
-		if app.noTui {
-			return cmd.Root().Help()
-		}
-		return runTUI(cmd.Root(), cmd.Context())
+		return cmd.Root().Help()
 	}
 
 	cobra.OnInitialize(initConfig)
@@ -169,7 +164,6 @@ func init() {
 
 	rootCmd.PersistentFlags().BoolP("authorized", "y", false, "confirm authorization scope non-interactively")
 
-	rootCmd.AddCommand(commandTUI())
 	rootCmd.AddCommand(newVersionCmd())
 	rootCmd.AddCommand(newCapabilitiesCmd())
 	rootCmd.AddCommand(newCompletionCmd())
