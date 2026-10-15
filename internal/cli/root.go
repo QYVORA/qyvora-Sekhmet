@@ -1,5 +1,5 @@
-// Package cli implements the sekhmet command-line interface. The same binary
-// is also the interactive console. The package wires configuration, logging,
+// Package cli implements the sekhmet command-line interface, a one-shot CLI.
+// The package wires configuration, logging,
 // output formatting, the target manager and the fuzzing pipeline together and
 // exposes the baseline/fuzz/corpus/report commands.
 package cli
@@ -35,7 +35,7 @@ classifying crashes, hangs and anomalies against that baseline rather than
 fuzzing blindly.
 
 Usage modes:
-  sekhmet                                start the interactive console
+  sekhmet                                print this help (one-shot CLI)
   sekhmet baseline --target ./target     profile normal target behaviour
   sekhmet fuzz --target ./target         run a fuzzing campaign
   sekhmet analyze --session <id>         classify results and findings
