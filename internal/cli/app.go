@@ -42,7 +42,6 @@ type appState struct {
 	outputFmt   string
 	eventsF     string
 	dryRun      bool
-	noTui       bool
 	timeout     string
 	insecureTLS bool
 

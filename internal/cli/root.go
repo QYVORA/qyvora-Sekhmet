@@ -154,7 +154,6 @@ func init() {
 	pf.BoolVar(&app.jsonOut, "json", false, "output in JSON format (shorthand for --output json)")
 	pf.StringVar(&app.eventsF, "events", "", "emit a JSONL event stream to stdout, stderr, or a file path")
 	pf.BoolVar(&app.dryRun, "dry-run", false, "resolve and print the fuzzing plan without executing")
-	pf.BoolVar(&app.noTui, "no-tui", false, "Disable TUI and print banner/help")
 	pf.StringVar(&app.timeout, "timeout", "", "default timeout for executions (e.g. 1s)")
 	pf.BoolVar(&app.insecureTLS, "insecure-tls", false, "disable TLS certificate verification for HTTP endpoints (authorized testing only)")
 	pf.BoolVar(&updateFlag, "update", false, "update the CLI to the latest official release")
