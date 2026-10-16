@@ -34,21 +34,12 @@ target's normal behaviour, then mutates and executes inputs against it,
 classifying crashes, hangs and anomalies against that baseline rather than
 fuzzing blindly.
 
-Usage modes:
-  sekhmet                                print this help (one-shot CLI)
-  sekhmet baseline --target ./target     profile normal target behaviour
-  sekhmet fuzz --target ./target         run a fuzzing campaign
-  sekhmet analyze --session <id>         classify results and findings
-  sekhmet corpus import|crops|list       manage the seed corpus
-  sekhmet crashes --session <id>         list deduplicated crashes
-  sekhmet minimize --input <file>        minimize an interesting input
-  sekhmet replay --input <file>          reproduce an input against a target
-  sekhmet session list|show              manage fuzzing sessions
-  sekhmet report --session <id>          render a campaign report
-  sekhmet target set|list|show           manage targets
-  sekhmet wordlists list|search          SecLists integration
-  sekhmet capabilities                   list machine-readable capabilities
-  sekhmet version
+Commands follow the shared tier grammar
+<tool> <tier> <module> [<action>] [target] [flags], where the tier is one of
+recon, exploit, or report. Run it with no arguments to print this help;
+fuzzing is one-shot, e.g. sekhmet recon baseline --target ./target,
+sekhmet exploit fuzz --target ./target,
+sekhmet report crashes --session <id>.
 
 Fuzzing targets are explicit. Remote targets (HTTP/network) require explicit
 authorization acknowledgement; local targets are scoped to the declared path.
@@ -56,11 +47,17 @@ sekhmet is intended for use only on systems you are authorized to test.`
 
 var rootCmd = &cobra.Command{
 	Use:           "sekhmet",
-	Short:         "High-performance fuzzing and vulnerability-discovery framework",
+	Short:         "Authorized fuzzing and vulnerability discovery framework",
 	Long:          appDescription,
 	Version:       version.String(),
 	SilenceUsage:  true,
 	SilenceErrors: true,
+	Example: `  sekhmet recon baseline --target ./target
+  sekhmet recon corpus list
+  sekhmet exploit fuzz --target ./target
+  sekhmet exploit minimize --input crash.bin
+  sekhmet report crashes --session <id>
+  sekhmet report --session <id> --out report.md`,
 	PersistentPreRunE: func(_ *cobra.Command, _ []string) error {
 		if app.initErr != nil {
 			return errs.NewExitError(2, app.initErr.Error())
@@ -164,23 +161,69 @@ func init() {
 
 	rootCmd.PersistentFlags().BoolP("authorized", "y", false, "confirm authorization scope non-interactively")
 
-	rootCmd.AddCommand(newVersionCmd())
-	rootCmd.AddCommand(newCapabilitiesCmd())
-	rootCmd.AddCommand(newCompletionCmd())
-	rootCmd.AddCommand(newUpdatesCmd())
-	rootCmd.AddCommand(newTargetCmd())
-	rootCmd.AddCommand(newBaselineCmd())
-	rootCmd.AddCommand(newFuzzCmd())
-	rootCmd.AddCommand(newAnalyzeCmd())
-	rootCmd.AddCommand(newCorpusCmd())
-	rootCmd.AddCommand(newCrashesCmd())
-	rootCmd.AddCommand(newMinimizeCmd())
-	rootCmd.AddCommand(newReplayCmd())
-	rootCmd.AddCommand(newSessionCmd())
-	rootCmd.AddCommand(newReportCmd())
-	rootCmd.AddCommand(newWordlistsCmd())
+	// Flat utility commands, identical in shape across all 14 tools.
+	rootCmd.AddCommand(newVersionCmd(), newCapabilitiesCmd(), newCompletionCmd(), newUpdatesCmd())
+
+	// Tier grammar: <tool> <tier> <module> [<action>] [target] [flags].
+	// sekhmet's target, corpus, wordlist and baseline/analysis work is
+	// recon-tier; fuzzing, replay and minimization drive the target and are
+	// exploit-tier; crashes and the campaign report are report-tier. The tier
+	// parents always exist so the command shape is uniform across tools.
+	recon := &cobra.Command{
+		Use:   "recon",
+		Short: "Target, corpus, wordlist, baseline and analysis modules",
+	}
+	recon.AddCommand(
+		newBaselineCmd(),
+		newAnalyzeCmd(),
+		newCorpusCmd(),
+		newSessionCmd(),
+		newTargetCmd(),
+		newWordlistsCmd(),
+	)
+
+	exploit := &cobra.Command{
+		Use:   "exploit",
+		Short: "Fuzzing, replay and minimization modules",
+	}
+	exploit.AddCommand(newFuzzCmd(), newReplayCmd(), newMinimizeCmd())
+
+	report := newReportCmd()
+	report.Short = "Render reports and inspect crashes"
+	report.AddCommand(newCrashesCmd())
+
+	rootCmd.AddCommand(recon, exploit, report)
+
+	// Backward-compatible top-level aliases: the tier form is the supported
+	// grammar, but every pre-tier invocation keeps resolving as a hidden
+	// command so existing scripts are not broken. `report` is itself a tier
+	// name, so its pre-tier form is handled by the tier. Cobra does not suggest
+	// hidden commands, so help stays clean.
+	rootCmd.AddCommand(
+		hiddenAlias("baseline", newBaselineCmd()),
+		hiddenAlias("analyze", newAnalyzeCmd()),
+		hiddenAlias("corpus", newCorpusCmd()),
+		hiddenAlias("session", newSessionCmd()),
+		hiddenAlias("target", newTargetCmd()),
+		hiddenAlias("wordlists", newWordlistsCmd()),
+		hiddenAlias("fuzz", newFuzzCmd()),
+		hiddenAlias("replay", newReplayCmd()),
+		hiddenAlias("minimize", newMinimizeCmd()),
+		hiddenAlias("crashes", newCrashesCmd()),
+	)
 
 	rootCmd.SetVersionTemplate(fmt.Sprintf("sekhmet %s\n", version.String()))
+}
+
+// hiddenAlias registers a command under its bare name, hidden from help, so
+// the pre-tier invocation form keeps resolving. The trailing usage breadcrumb
+// (e.g. "corpus import <path>") is preserved.
+func hiddenAlias(name string, cmd *cobra.Command) *cobra.Command {
+	if old := cmd.Name(); name != old {
+		cmd.Use = name + cmd.Use[len(old):]
+	}
+	cmd.Hidden = true
+	return cmd
 }
 
 // initConfig loads configuration and initializes the shared logger, printer,
