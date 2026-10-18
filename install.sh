@@ -79,8 +79,8 @@ QYVORA_MIN_GO="1.26"
 QYVORA_ICON="sekhmet.png"
 QYVORA_ICO="sekhmet.ico"
 QYVORA_DESKTOP_NAME="SEKHMET"
-QYVORA_DESKTOP_COMMENT="Red team automation and adversarial simulation"
-QYVORA_DESKTOP_KEYWORDS="redteam;adversarial;simulation;evasion;adversary;automation"
+QYVORA_DESKTOP_COMMENT="Authorized fuzzing and vulnerability discovery"
+QYVORA_DESKTOP_KEYWORDS="fuzzing;vulnerability;discovery;mutation;crash;coverage"
 # Ordered probes used to prove the installed binary runs
 QYVORA_VERSION_PROBE="--version version --help"
 # Additional .desktop entry, if the upstream asset ships one
