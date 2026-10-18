@@ -71,4 +71,4 @@ _No report-tier modules._
 | `sekhmet target` | Manage fuzzing targets |
 | `sekhmet tui` | start the interactive terminal application |
 | `sekhmet wordlists` | SecLists integration: list categories and search wordlists |
-
+| `docs script <file>` | Run a `.qs` script with the shared scripting engine (`run`/`build` subcommands) |
