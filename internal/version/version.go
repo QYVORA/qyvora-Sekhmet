@@ -4,11 +4,11 @@
 //
 //	go build -ldflags "-X github.com/QYVORA/qyvora-sekhmet/internal/version.Version=<tag> ..."
 //
-// The default Version is a semver baseline, never the bare string "dev", so
-// machine consumers always receive actionable identity. A development (not yet
-// released) build remains distinguishable from a release artifact by its
-// Commit/Date/BuildUser metadata ("none"/"unknown"), which release pipelines
-// overwrite.
+// Unstamped dev builds report "dev"; release builds stamp a version via the
+// ldflags above and MUST NOT report a dev marker (QYVORA output spec,
+// section 4). A development (not yet released) build remains distinguishable
+// from a release artifact by its Commit/Date/BuildUser metadata
+// ("none"/"unknown"), which release pipelines overwrite.
 package version
 
 import "runtime"
