@@ -20,3 +20,8 @@
 
 # Local automation artifact
 continue_AI.sh
+
+# Script engine output
+sekhmet-report.json
+sessions/
+corpus/

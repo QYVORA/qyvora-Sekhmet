@@ -25,6 +25,7 @@ import (
 )
 
 var updateFlag bool
+var allowShellOut bool
 
 var app = newAppState()
 
@@ -154,6 +155,7 @@ func init() {
 	pf.BoolVar(&app.jsonOut, "json", false, "output in JSON format (shorthand for --output json)")
 	pf.StringVar(&app.eventsF, "events", "", "emit a JSONL event stream to stdout, stderr, or a file path")
 	pf.BoolVar(&app.dryRun, "dry-run", false, "resolve and print the fuzzing plan without executing")
+	pf.BoolVar(&allowShellOut, "allow-shellout", false, "allow scripts to use exec/run.cmd shell-out (also via QYVORA_ALLOW_SHELLOUT=1)")
 	pf.StringVar(&app.timeout, "timeout", "", "default timeout for executions (e.g. 1s)")
 	pf.BoolVar(&app.insecureTLS, "insecure-tls", false, "disable TLS certificate verification for HTTP endpoints (authorized testing only)")
 	pf.BoolVar(&updateFlag, "update", false, "update the CLI to the latest official release")
@@ -161,7 +163,7 @@ func init() {
 	rootCmd.PersistentFlags().BoolP("authorized", "y", false, "confirm authorization scope non-interactively")
 
 	// Flat utility commands, identical in shape across all 14 tools.
-	rootCmd.AddCommand(newVersionCmd(), newCapabilitiesCmd(), newCompletionCmd(), newUpdatesCmd())
+	rootCmd.AddCommand(newVersionCmd(), newCapabilitiesCmd(), newCompletionCmd(), newUpdatesCmd(), newScriptCmd())
 
 	// Tier grammar: <tool> <tier> <module> [<action>] [target] [flags].
 	// sekhmet's target, corpus, wordlist and baseline/analysis work is
