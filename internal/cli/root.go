@@ -15,6 +15,7 @@ import (
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 
+	"github.com/QYVORA/qyvora-sekhmet/internal/banner"
 	"github.com/QYVORA/qyvora-sekhmet/internal/config"
 	errs "github.com/QYVORA/qyvora-sekhmet/internal/errors"
 	"github.com/QYVORA/qyvora-sekhmet/internal/logger"
@@ -49,7 +50,7 @@ sekhmet is intended for use only on systems you are authorized to test.`
 var rootCmd = &cobra.Command{
 	Use:           "sekhmet",
 	Short:         "Authorized fuzzing and vulnerability discovery framework",
-	Long:          appDescription,
+	Long:          banner.Render() + "\n\n  " + banner.Tagline + " — " + version.CompanyName + "\n  " + version.CompanyURL + "\n  Built in " + version.CompanyCity + "\n\n" + appDescription,
 	Version:       version.String(),
 	SilenceUsage:  true,
 	SilenceErrors: true,
