@@ -69,8 +69,10 @@ reporting are implemented and tested. See [CHANGELOG.md](CHANGELOG.md) and
 - **Wired safety** — execution budgets, size caps, concurrency limits,
   authorization gates and dry-run; see [docs/Safety-Model.md](docs/Safety-Model.md)
 - **SecLists integration** — search and load words without vendoring ~5 GB
-- **Interactive console** — run `sekhmet` with no args to work interactively
-  (real terminal); piped/redirected stdin degrades to a plain line reader
+- **Interactive console** — retired and unavailable in this release; the
+  per-tool TUI is excluded from builds (`//go:build ignore`) pending the
+  redirect of qyvora-tui to the future AI orchestration layer. A bare
+  `sekhmet` invocation prints CLI usage.
 
 ## Install
 
