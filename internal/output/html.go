@@ -73,7 +73,7 @@ func writeHTMLValue(b *strings.Builder, name string, val reflect.Value, level in
 			b.WriteString("<li>" + html.EscapeString(item) + "</li>\n")
 		}
 		b.WriteString("</ul>\n")
-	case reflect.Ptr:
+	case reflect.Pointer:
 		writeHTMLValue(b, name, val.Elem(), level)
 	default:
 		writeHTMLEscaped(b, fmtValue(val))
