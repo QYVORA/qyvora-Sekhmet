@@ -56,7 +56,7 @@ func writeMarkdownValue(b *strings.Builder, name string, val reflect.Value, dept
 			return
 		}
 		writeMDNode(b, mdList(val), depth)
-	case reflect.Ptr:
+	case reflect.Pointer:
 		writeMarkdownValue(b, name, val.Elem(), depth)
 	default:
 		writeMDBullet(b, name, fmtValue(val), depth)
@@ -299,7 +299,7 @@ func fmtValue(val reflect.Value) string {
 }
 
 func derefValue(val reflect.Value) reflect.Value {
-	for val.IsValid() && (val.Kind() == reflect.Ptr || val.Kind() == reflect.Interface) {
+	for val.IsValid() && (val.Kind() == reflect.Pointer || val.Kind() == reflect.Interface) {
 		if val.IsNil() {
 			return reflect.Value{}
 		}
