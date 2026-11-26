@@ -12,6 +12,10 @@ that baseline — and prioritizing the mutations most likely to reach new code.
 
 ---
 
+## Readiness
+
+**BETA.** SEKHMET performs baseline-aware fuzzing with mutation operators, feedback scheduling, replay, and delta minimization; it is not an internet scanner. Implementation exists for exploration/testing but has not received final production-readiness approval. Its owner classification is `BETA` in the [Product Registry](../../../../knowledge/qyvora-docs/07-products/PRODUCT-REGISTRY.md); release tags do not promote it to `AVAILABLE`.
+
 ## What it is
 
 A single interface to run a controllable fuzzing campaign against a target you
